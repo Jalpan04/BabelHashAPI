@@ -1,10 +1,183 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal to the Library of Babel</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f0f2f5; color: #1c1e21; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 1rem; }
+        .container { background: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; max-width: 600px; width: 100%; }
+        h1 { font-size: 1.5rem; }
+        p { color: #606770; }
+        .tab-nav { border-bottom: 1px solid #ddd; margin-bottom: 1.5rem; }
+        .tab-button { background: none; border: none; padding: 10px 15px; cursor: pointer; font-size: 1rem; color: #606770; border-bottom: 3px solid transparent; }
+        .tab-button.active { color: #1877f2; border-bottom-color: #1877f2; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        input, textarea { width: 95%; padding: 10px; margin-top: 1rem; border-radius: 6px; border: 1px solid #ddd; font-size: 1rem; }
+        button { background-color: #1877f2; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 1rem; }
+        button:hover { background-color: #166fe5; }
+        .result-box { margin-top: 1.5rem; word-wrap: break-word; background: #e7f3ff; padding: 1rem; border-radius: 6px; text-align: left; }
+        .result-box h3 { margin: 0 0 0.5rem 0; }
+        .result-box code { font-family: monospace; font-size: 0.9rem; color: #1c1e21; }
+        #pageContent { font-family: monospace; white-space: pre-wrap; line-height: 1.2; text-align: left; background: #f9f9f9; padding: 1rem; border-radius: 6px; margin-top: 1rem; max-height: 300px; overflow-y: auto; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #1877f2; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 1rem auto; display: none; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
 </head>
 <body>
-$END$
+    <div class="container">
+        <h1>The Library of Babel</h1>
+
+        <div class="tab-nav">
+            <button class="tab-button active" onclick="showTab('search')">Search</button>
+            <button class="tab-button" onclick="showTab('view')">View by Address</button>
+            <button class="tab-button" onclick="showTab('explore')">Explore</button>
+        </div>
+
+        <div id="searchTab" class="tab-content active">
+            <p>Enter any text to find its unique address.</p>
+            <textarea id="searchText" rows="4" placeholder="It was the best of times..."></textarea>
+            <button onclick="findAddress()">Find Address</button>
+            <div id="searchResult" class="result-box" style="display:none;">
+                <h3>Found at address:</h3>
+                <code id="addressHash"></code>
+                <div id="viewSearchResultButton"></div>
+            </div>
+        </div>
+
+        <div id="viewTab" class="tab-content">
+            <p>Enter a hash and page number to view a page.</p>
+            <input type="text" id="hashInput" placeholder="Enter 64-character hash">
+            <input type="number" id="pageNumInput" placeholder="Page number (1-410)" min="1" max="410">
+            <button onclick="viewPageFromInputs()">View Page</button>
+        </div>
+
+        <div id="exploreTab" class="tab-content">
+            <p>Discover a random page from a random book.</p>
+            <button onclick="exploreLibrary()">Find a Random Page</button>
+        </div>
+
+        <div class="loader" id="loader"></div>
+        <div id="pageViewer" class="result-box" style="display:none;">
+             <h3>Displaying Page <span id="pageNumberDisplay"></span></h3>
+             <pre id="pageContent"></pre>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = "https://babel-hash-api.onrender.com";
+        const loader = document.getElementById('loader');
+
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            document.querySelector(`.tab-button[onclick="showTab('${tabName}')"]`).classList.add('active');
+            document.getElementById('pageViewer').style.display = 'none'; // Hide viewer when switching tabs
+        }
+
+        async function findAddress() {
+            const text = document.getElementById('searchText').value;
+            const resultDiv = document.getElementById('searchResult');
+            const hashEl = document.getElementById('addressHash');
+            const viewButtonDiv = document.getElementById('viewSearchResultButton');
+
+            if (!text) { alert("Please enter some text."); return; }
+
+            loader.style.display = 'block';
+            resultDiv.style.display = 'none';
+            viewButtonDiv.innerHTML = '';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+
+                hashEl.textContent = data.address_hash;
+                resultDiv.style.display = 'block';
+
+                // Add a button to view the page where the text is found (assuming page 1)
+                const viewButton = document.createElement('button');
+                viewButton.textContent = 'View Page 1 of this Book';
+                viewButton.onclick = () => viewPage(data.address_hash, 1);
+                viewButtonDiv.appendChild(viewButton);
+
+            } catch (error) {
+                console.error("Error fetching address:", error);
+                alert("Could not connect to the API.");
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        function viewPageFromInputs() {
+            const hash = document.getElementById('hashInput').value;
+            const pageNum = document.getElementById('pageNumInput').value;
+            if (!hash || !pageNum) { alert("Please enter both a hash and a page number."); return; }
+            if (hash.length !== 64) { alert("Hash must be 64 characters long."); return; }
+            if (pageNum < 1 || pageNum > 410) { alert("Page number must be between 1 and 410."); return; }
+            viewPage(hash, pageNum);
+        }
+
+        async function viewPage(hash, pageNum) {
+            const pageViewer = document.getElementById('pageViewer');
+            const pageContent = document.getElementById('pageContent');
+            const pageNumDisplay = document.getElementById('pageNumberDisplay');
+
+            loader.style.display = 'block';
+            pageViewer.style.display = 'none';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/page/${hash}/${pageNum}`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+
+                pageContent.textContent = data.lines.join('\n');
+                pageNumDisplay.textContent = data.page_number;
+                pageViewer.style.display = 'block';
+            } catch (error) {
+                console.error("Error fetching page:", error);
+                alert("Could not retrieve the page. Check the hash and page number.");
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        async function exploreLibrary() {
+            loader.style.display = 'block';
+            document.getElementById('pageViewer').style.display = 'none';
+
+            try {
+                // 1. Generate a random string to act as a seed
+                const randomSeed = Math.random().toString(36).substring(2);
+
+                // 2. Use the search endpoint to get a valid hash for our random seed
+                const searchResponse = await fetch(`${API_BASE_URL}/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: randomSeed })
+                });
+                if (!searchResponse.ok) throw new Error('Could not generate a random hash.');
+                const searchData = await searchResponse.json();
+                const randomHash = searchData.address_hash;
+
+                // 3. Generate a random page number
+                const randomPageNum = Math.floor(Math.random() * 410) + 1;
+
+                // 4. Call the viewPage function with the random data
+                viewPage(randomHash, randomPageNum);
+
+            } catch (error) {
+                console.error("Error exploring library:", error);
+                alert("Could not find a random page.");
+                loader.style.display = 'none';
+            }
+        }
+    </script>
 </body>
 </html>
