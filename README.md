@@ -4,6 +4,7 @@
 A deterministic API and web portal for exploring a computational version of Jorge Luis Borges's "The Library of Babel." This project transforms the library from an impossible physical space into a navigable mathematical one.
 
 **Live Demo:** [https://jalpan04.github.io/BabelHashAPI/](https://jalpan04.github.io/BabelHashAPI/)
+<img width="1024" height="1536" alt="ChatGPT Image Oct 20, 2025, 09_58_47 AM" src="https://github.com/user-attachments/assets/4b93544a-5078-46f5-9956-162aa6b8d88f" />
 
 ---
 
