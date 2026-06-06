@@ -1,5 +1,7 @@
 # Babel Hash API
 
+![GitHub top language](https://img.shields.io/github/languages/top/Jalpan04/BabelHashAPI) ![GitHub repo size](https://img.shields.io/github/repo-size/Jalpan04/BabelHashAPI) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+
 
 A deterministic API and web portal for exploring a computational version of Jorge Luis Borges's "The Library of Babel." This project transforms the library from an impossible physical space into a navigable mathematical one.
 
